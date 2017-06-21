@@ -47,7 +47,11 @@ class ElkLogger {
             this.getRemotePort(),
             this.getRemoteHost()
         );
-    } 
+    }
+
+    sendJSON(json) {
+        this.sendMessage(JSON.stringify(json));
+    }
 }
 
 module.exports = ElkLogger;

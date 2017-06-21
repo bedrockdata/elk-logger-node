@@ -20,10 +20,6 @@ var ElkLogger = function () {
 
         if (config['socket-client']) {
             this.socketClient = config['socket-client'];
-
-            // if (!this.socketclient instanceof net.Socket) {
-            //     throw new Error('Socket Client needs to be an instance of net.Socket()');
-            // }
         } else {
             this.socketClient = new net.Socket();
         }
@@ -63,6 +59,11 @@ var ElkLogger = function () {
             });
 
             this.socketClient.connect(this.getRemotePort(), this.getRemoteHost());
+        }
+    }, {
+        key: 'sendJSON',
+        value: function sendJSON(json) {
+            this.sendMessage(JSON.stringify(json));
         }
     }]);
 

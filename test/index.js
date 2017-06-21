@@ -102,4 +102,19 @@ describe('bedrock-elk-logger', function() {
       expect(() => elkLogger.sendMessage(message)).to.not.throw();
     });
   });
+
+  describe('sendJSON', function() {
+    it('shall call sendMessage with a stringified version of the JSON message', function() {
+      const elkLogger = new ElkLogger({'remote-host': 'test', 'remote-port': '1337'});
+      const message   = {message: 'test message'};
+
+      const mock = sinon
+        .mock(elkLogger)
+        .expects('sendMessage')
+        .withArgs(JSON.stringify(message));
+        
+      elkLogger.sendJSON(message);
+      mock.verify();
+    })
+  })
 });
