@@ -57,7 +57,7 @@ describe('bedrock-elk-logger', function() {
 
       const mock = sinon
         .mock(socket)
-        .expects('write')
+        .expects('end')
         .withArgs(message)
         .once();
 
@@ -67,15 +67,13 @@ describe('bedrock-elk-logger', function() {
       mock.verify();
     });
 
-    it('shall close the tcp connection after writing', function() {
+    it('shall destroy the tcp connection after writing', function() {
       const elkConfig = {'remote-host': 'test', 'remote-port': '1337', 'socket-client': socket = new net.Socket()};
       const message   = 'test message';
 
       sinon.stub(socket, 'connect').callsFake(() => {
-        socket.emit('connect');
+        socket.emit('end');
       });
-
-      sinon.stub(socket, 'write');
 
       const mock = sinon
         .mock(socket)
@@ -104,14 +102,14 @@ describe('bedrock-elk-logger', function() {
   });
 
   describe('sendJSON', function() {
-    it('shall call sendMessage with a stringified version of the JSON message', function() {
+    it('shall call sendMessage with a stringified version of the JSON message followed by a newline', function() {
       const elkLogger = new ElkLogger({'remote-host': 'test', 'remote-port': '1337'});
       const message   = {message: 'test message'};
 
       const mock = sinon
         .mock(elkLogger)
         .expects('sendMessage')
-        .withArgs(JSON.stringify(message));
+        .withArgs(JSON.stringify(message) + "\n");
         
       elkLogger.sendJSON(message);
       mock.verify();

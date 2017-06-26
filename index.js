@@ -31,16 +31,15 @@ class ElkLogger {
 
     sendMessage(msg) {
         this.socketClient.on('connect', () => {
-            this.socketClient.write(msg);
-            this.socketClient.destroy();
+            this.socketClient.end(msg);
         });
 
         this.socketClient.on('error', error => {
             console.log('There was an error connecting to ' + this.getRemoteHost() + ':' + this.getRemotePort() + ' - ' + error);
         });
 
-        this.socketClient.on('data', data => {
-            console.log('Response from ' + this.getRemoteHost() + ': ' + data);
+        this.socketClient.on('end', data => {
+            this.socketClient.destroy();
         });
 
         this.socketClient.connect(
@@ -50,7 +49,7 @@ class ElkLogger {
     }
 
     sendJSON(json) {
-        this.sendMessage(JSON.stringify(json));
+        this.sendMessage(JSON.stringify(json) + "\n");
     }
 }
 

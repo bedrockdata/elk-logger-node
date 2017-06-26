@@ -46,16 +46,15 @@ var ElkLogger = function () {
             var _this = this;
 
             this.socketClient.on('connect', function () {
-                _this.socketClient.write(msg);
-                _this.socketClient.destroy();
+                _this.socketClient.end(msg);
             });
 
             this.socketClient.on('error', function (error) {
                 console.log('There was an error connecting to ' + _this.getRemoteHost() + ':' + _this.getRemotePort() + ' - ' + error);
             });
 
-            this.socketClient.on('data', function (data) {
-                console.log('Response from ' + _this.getRemoteHost() + ': ' + data);
+            this.socketClient.on('end', function (data) {
+                _this.socketClient.destroy();
             });
 
             this.socketClient.connect(this.getRemotePort(), this.getRemoteHost());
@@ -63,7 +62,7 @@ var ElkLogger = function () {
     }, {
         key: 'sendJSON',
         value: function sendJSON(json) {
-            this.sendMessage(JSON.stringify(json));
+            this.sendMessage(JSON.stringify(json) + "\n");
         }
     }]);
 
