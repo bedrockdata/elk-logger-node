@@ -6,20 +6,26 @@ configured with [the TCP input](https://www.elastic.co/guide/en/logstash/current
 ## Installation
 
 ```bash
-npm install --save git+ssh://git@github.com:bedrockdata/elk-logger-node.git#v0.0.1
+npm install --save tcp-elk-logger
 ```
 
 ## Usage
 
 ```coffee
 # Load the Logger package
-Logger = require 'tcp-elk-logger'
+Logger = require('tcp-elk-logger');
 
 # Create a logger object
-logger = new Logger({'remote-host': '10.0.1.125', 'remote-port': '9999'})
+logger = new Logger({'remote-host': '10.0.1.125', 'remote-port': '9999'});
 
 # Send a log message
-logger.sendMessage 'Testing from node!'
+logger.sendMessage('Testing from node!');
+
+# Send a json message
+logger.sendJSON({
+    "style": "cold brew",
+    "vendor": "gracenote",
+});
 ```
 
 ## Contributing

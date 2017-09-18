@@ -5,7 +5,7 @@
   "main": "index.es5.js",
   "repository": {
     "type": "git",
-    "url": "https://github.com/bedrockdata/elk-logger-node.git"
+    "url": "https://github.com/bedrockdata/elk-logger-node"
   },
   "scripts": {
     "test": "mocha",
