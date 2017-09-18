@@ -15,18 +15,10 @@ var ElkLogger = function () {
 
         this.config = {
             'remote-host': config['remote-host'],
-            'remote-port': config['remote-port']
+            'remote-port': config['remote-port'],
+            'timeout': config['timeout'] || 2000,
+            'socket': config['socket-client']
         };
-
-        if (config['socket-client']) {
-            this.socketClient = config['socket-client'];
-        } else {
-            this.socketClient = new net.Socket();
-        }
-
-        if (config['timeout']) {
-            this.socketClient.setTimeout(config['timeout']);
-        }
     }
 
     _createClass(ElkLogger, [{
@@ -40,34 +32,51 @@ var ElkLogger = function () {
             return this.config['remote-port'];
         }
     }, {
-        key: 'getSocketClient',
-        value: function getSocketClient() {
-            return this.socketClient;
+        key: 'getTimeout',
+        value: function getTimeout() {
+            return this.config['timeout'];
+        }
+    }, {
+        key: 'createNewSocket',
+        value: function createNewSocket() {
+            var socket = void 0;
+
+            if (this.config['socket']) {
+                socket = this.config['socket'];
+            } else {
+                socket = new net.Socket();
+            }
+
+            socket.setTimeout(this.getTimeout());
+
+            return socket;
         }
     }, {
         key: 'sendMessage',
         value: function sendMessage(msg) {
             var _this = this;
 
+            var socket = this.createNewSocket();
+
             return new Promise(function (resolve, reject) {
-                _this.socketClient.on('connect', function () {
-                    _this.socketClient.end(msg + "\n");
+                socket.on('connect', function () {
+                    socket.end(msg + "\n");
                 });
 
-                _this.socketClient.on('error', function (error) {
+                socket.on('error', function (error) {
                     reject('There was an error connecting to ' + _this.getRemoteHost() + ':' + _this.getRemotePort() + ' - ' + error);
                 });
 
-                _this.socketClient.on('timeout', function (error) {
+                socket.on('timeout', function (error) {
                     reject('Connection to  ' + _this.getRemoteHost() + ':' + _this.getRemotePort() + ' timed out - ' + error);
                 });
 
-                _this.socketClient.on('end', function (data) {
-                    _this.socketClient.destroy();
+                socket.on('end', function (data) {
+                    socket.destroy();
                     resolve();
                 });
 
-                _this.socketClient.connect(_this.getRemotePort(), _this.getRemoteHost());
+                socket.connect(_this.getRemotePort(), _this.getRemoteHost());
             });
         }
     }, {

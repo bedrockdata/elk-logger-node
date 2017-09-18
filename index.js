@@ -8,17 +8,9 @@ class ElkLogger {
         this.config = {
             'remote-host': config['remote-host'],
             'remote-port': config['remote-port'],
+            'timeout':     config['timeout'] || 2000,
+            'socket':      config['socket-client'],
         };
-
-        if (config['socket-client']) {
-            this.socketClient = config['socket-client'];
-        } else {
-            this.socketClient = new net.Socket();
-        }
-        
-        if(config['timeout']) {
-            this.socketClient.setTimeout(config['timeout']);
-        }
     }
 
     getRemoteHost() {
@@ -28,31 +20,47 @@ class ElkLogger {
     getRemotePort() {
         return this.config['remote-port'];
     }
+    
+    getTimeout() {
+        return this.config['timeout'];
+    }
+    
+    createNewSocket() {
+        let socket;
 
-    getSocketClient() {
-        return this.socketClient;
+        if (this.config['socket']) {
+            socket = this.config['socket'];
+        } else {
+            socket = new net.Socket();
+        }
+
+        socket.setTimeout(this.getTimeout());
+        
+        return socket;
     }
 
     sendMessage(msg) {
+        const socket = this.createNewSocket();
+
         return new Promise((resolve, reject) => {
-            this.socketClient.on('connect', () => {
-                this.socketClient.end(msg + "\n");
+            socket.on('connect', () => {
+                socket.end(msg + "\n");
             });
     
-            this.socketClient.on('error', error => {
+            socket.on('error', error => {
                 reject('There was an error connecting to ' + this.getRemoteHost() + ':' + this.getRemotePort() + ' - ' + error);
             });
 
-            this.socketClient.on('timeout', error => {
+            socket.on('timeout', error => {
                 reject('Connection to  ' + this.getRemoteHost() + ':' + this.getRemotePort() + ' timed out - ' + error);
             })
     
-            this.socketClient.on('end', data => {
-                this.socketClient.destroy();
+            socket.on('end', data => {
+                socket.destroy();
                 resolve();
             });
     
-            this.socketClient.connect(
+            socket.connect(
                 this.getRemotePort(),
                 this.getRemoteHost()
             );

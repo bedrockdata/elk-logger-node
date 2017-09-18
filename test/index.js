@@ -24,26 +24,51 @@ describe('tcp-elk-logger', function() {
 
       expect(elkLogger.getRemotePort()).to.equal(elkConfig['remote-port']);
     });
-        
-    it('shall accept an optional timeout parameter', function() {
+    
+    it('shall accept a timeout configuration', function() {
+      const elkConfig = {'timeout': 'timeout test'};
+      const elkLogger = new ElkLogger(elkConfig);
+
+      expect(elkLogger.getTimeout()).to.equal(elkConfig['timeout']);
+    });
+    
+    it('shall default the timeout configuration to 2 seconds', function() {
+      const elkLogger = new ElkLogger({});
+
+      expect(elkLogger.getTimeout()).to.equal(2000);
+    });
+    
+    it('shall accept a client configuration (for dependency injection)', function() {
+      const elkConfig = {'socket-client': socket = new net.Socket()};
+      const elkLogger = new ElkLogger(elkConfig);
+
+      expect(elkLogger.createNewSocket()).to.equal(elkConfig['socket-client']);
+    });
+  });
+
+  describe('createNewSocket', function() {   
+    it('shall set the timeout value', function() {
       const elkConfig = {'remote-host': 'test', 'remote-port': '1337', 'timeout': 'some timeout', 'socket-client': socket = new net.Socket()};
 
       const mock = sinon
-      .mock(socket)
-      .expects('setTimeout')
-      .withArgs(elkConfig['timeout'])
-      .once();
+        .mock(socket)
+        .expects('setTimeout')
+        .withArgs(elkConfig['timeout'])
+        .once();
 
       const elkLogger = new ElkLogger(elkConfig);
+      elkLogger.createNewSocket();
 
       mock.verify();
     });
 
     it('shall accept an optional configuration parameter for the net socket client', function() {
       const elkConfig = {'socket-client': new net.Socket()};
+      elkConfig['socket-client'].tddTest = 'testing';
+
       const elkLogger = new ElkLogger(elkConfig);
 
-      expect(elkLogger.getSocketClient()).to.equal(elkConfig['socket-client']);
+      expect(elkLogger.createNewSocket().tddTest).to.equal(elkConfig['socket-client'].tddTest);
     });
   });
 
@@ -53,7 +78,8 @@ describe('tcp-elk-logger', function() {
 
       const mock = sinon.mock(socket)
         .expects('connect')
-        .withArgs(elkConfig['remote-port'], elkConfig['remote-host']);
+        .withArgs(elkConfig['remote-port'], elkConfig['remote-host'])
+        .callsFake(() => socket.emit('end'));
 
       const elkLogger = new ElkLogger(elkConfig);
       elkLogger.sendMessage('...');
@@ -68,7 +94,7 @@ describe('tcp-elk-logger', function() {
       sinon.stub(socket, 'connect').callsFake(() => {
         socket.emit('connect');
       });
-
+      
       const mock = sinon
         .mock(socket)
         .expects('end')
