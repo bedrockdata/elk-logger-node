@@ -9,23 +9,37 @@ const sinonChai = require('sinon-chai');
 
 chai.use(sinonChai);
 
-describe('bedrock-elk-logger', function() {
+describe('tcp-elk-logger', function() {
   describe('constructor', function() {
-    it('shall accept a remote host configuraton', function() {
+    it('shall accept a remote host configuration', function() {
       const elkConfig = {'remote-host': 'test'};
       const elkLogger = new ElkLogger(elkConfig);
 
       expect(elkLogger.getRemoteHost()).to.equal(elkConfig['remote-host']);
     });
-
-    it('shall accept a remote port configuraton', function() {
+    
+    it('shall accept a remote port configuration', function() {
       const elkConfig = {'remote-port': '1337'};
       const elkLogger = new ElkLogger(elkConfig);
 
       expect(elkLogger.getRemotePort()).to.equal(elkConfig['remote-port']);
     });
+        
+    it('shall accept an optional timeout parameter', function() {
+      const elkConfig = {'remote-host': 'test', 'remote-port': '1337', 'timeout': 'some timeout', 'socket-client': socket = new net.Socket()};
 
-    it('shall accept an optional configuation parameter for the net socket client', function() {
+      const mock = sinon
+      .mock(socket)
+      .expects('setTimeout')
+      .withArgs(elkConfig['timeout'])
+      .once();
+
+      const elkLogger = new ElkLogger(elkConfig);
+
+      mock.verify();
+    });
+
+    it('shall accept an optional configuration parameter for the net socket client', function() {
       const elkConfig = {'socket-client': new net.Socket()};
       const elkLogger = new ElkLogger(elkConfig);
 
@@ -47,7 +61,7 @@ describe('bedrock-elk-logger', function() {
       mock.verify();
     });
 
-    it('shall write the message to the socket client', function() {
+    it('shall write the message to the socket client, appending a newline', function() {
       const elkConfig = {'remote-host': 'test', 'remote-port': '1337', 'socket-client': socket = new net.Socket()};
       const message   = 'test message';
 
@@ -58,7 +72,7 @@ describe('bedrock-elk-logger', function() {
       const mock = sinon
         .mock(socket)
         .expects('end')
-        .withArgs(message)
+        .withArgs(message + "\n")
         .once();
 
       const elkLogger = new ElkLogger(elkConfig);
@@ -86,7 +100,36 @@ describe('bedrock-elk-logger', function() {
       mock.verify();
     });
 
-    it('shall handle connection errors by logging to the console', function() {
+    it('shall return a promise', function() {
+      const elkConfig = {'remote-host': 'test', 'remote-port': '1337', 'socket-client': socket = new net.Socket()};
+      const message   = 'test message';
+      
+      sinon.stub(socket, 'connect').callsFake(() => {
+        socket.emit('end');
+      });
+
+      const elkLogger = new ElkLogger(elkConfig);
+      const promise   = elkLogger.sendMessage(message);
+
+      expect(promise).to.be.a('Promise');
+    });
+
+    it('shall resolve the promise after "end" is emitted', function(done) {
+      const elkConfig = {'remote-host': 'test', 'remote-port': '1337', 'socket-client': socket = new net.Socket()};
+      const message   = 'test message';
+
+      sinon.stub(socket, 'connect').callsFake(() => {
+        socket.emit('end');
+      });
+
+      const elkLogger = new ElkLogger(elkConfig);
+      elkLogger.sendMessage(message).then(
+        () => done(),
+        () => done('sendMessage promise rejected, it was expected to resolve.')
+      );
+    });
+    
+    it('shall reject the promise if "error" is emitted', function(done) {
       const elkConfig = {'remote-host': 'test', 'remote-port': '1337', 'socket-client': socket = new net.Socket()};
       const message   = 'test message';
 
@@ -94,25 +137,41 @@ describe('bedrock-elk-logger', function() {
         socket.emit('error');  
       });
 
-      elkConfig['socket-client'] = socket;
       const elkLogger = new ElkLogger(elkConfig);
+      elkLogger.sendMessage(message).then(
+        () => done('sendMessage promise resolved, it was expected to reject.'),
+        () => done()
+      );
+    });
+    
+    it('shall reject the promise if "timeout" is emitted', function(done) {
+      const elkConfig = {'remote-host': 'test', 'remote-port': '1337', 'socket-client': socket = new net.Socket()};
+      const message   = 'test message';
 
-      expect(() => elkLogger.sendMessage(message)).to.not.throw();
+      sinon.stub(socket, 'connect').callsFake(() => {
+        socket.emit('timeout');  
+      });
+
+      const elkLogger = new ElkLogger(elkConfig);
+      elkLogger.sendMessage(message).then(
+        () => done('sendMessage promise resolved, it was expected to reject.'),
+        () => done()
+      );
     });
   });
 
   describe('sendJSON', function() {
-    it('shall call sendMessage with a stringified version of the JSON message followed by a newline', function() {
+    it('shall call sendMessage with a stringified version of the JSON message', function() {
       const elkLogger = new ElkLogger({'remote-host': 'test', 'remote-port': '1337'});
       const message   = {message: 'test message'};
 
       const mock = sinon
         .mock(elkLogger)
         .expects('sendMessage')
-        .withArgs(JSON.stringify(message) + "\n");
+        .withArgs(JSON.stringify(message));
         
       elkLogger.sendJSON(message);
       mock.verify();
-    })
-  })
+    });
+  });
 });

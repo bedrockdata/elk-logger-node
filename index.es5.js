@@ -23,6 +23,10 @@ var ElkLogger = function () {
         } else {
             this.socketClient = new net.Socket();
         }
+
+        if (config['timeout']) {
+            this.socketClient.setTimeout(config['timeout']);
+        }
     }
 
     _createClass(ElkLogger, [{
@@ -45,24 +49,31 @@ var ElkLogger = function () {
         value: function sendMessage(msg) {
             var _this = this;
 
-            this.socketClient.on('connect', function () {
-                _this.socketClient.end(msg);
-            });
+            return new Promise(function (resolve, reject) {
+                _this.socketClient.on('connect', function () {
+                    _this.socketClient.end(msg + "\n");
+                });
 
-            this.socketClient.on('error', function (error) {
-                console.log('There was an error connecting to ' + _this.getRemoteHost() + ':' + _this.getRemotePort() + ' - ' + error);
-            });
+                _this.socketClient.on('error', function (error) {
+                    reject('There was an error connecting to ' + _this.getRemoteHost() + ':' + _this.getRemotePort() + ' - ' + error);
+                });
 
-            this.socketClient.on('end', function (data) {
-                _this.socketClient.destroy();
-            });
+                _this.socketClient.on('timeout', function (error) {
+                    reject('Connection to  ' + _this.getRemoteHost() + ':' + _this.getRemotePort() + ' timed out - ' + error);
+                });
 
-            this.socketClient.connect(this.getRemotePort(), this.getRemoteHost());
+                _this.socketClient.on('end', function (data) {
+                    _this.socketClient.destroy();
+                    resolve();
+                });
+
+                _this.socketClient.connect(_this.getRemotePort(), _this.getRemoteHost());
+            });
         }
     }, {
         key: 'sendJSON',
         value: function sendJSON(json) {
-            this.sendMessage(JSON.stringify(json) + "\n");
+            return this.sendMessage(JSON.stringify(json));
         }
     }]);
 

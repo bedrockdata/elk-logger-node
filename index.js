@@ -15,6 +15,10 @@ class ElkLogger {
         } else {
             this.socketClient = new net.Socket();
         }
+        
+        if(config['timeout']) {
+            this.socketClient.setTimeout(config['timeout']);
+        }
     }
 
     getRemoteHost() {
@@ -30,26 +34,33 @@ class ElkLogger {
     }
 
     sendMessage(msg) {
-        this.socketClient.on('connect', () => {
-            this.socketClient.end(msg);
-        });
+        return new Promise((resolve, reject) => {
+            this.socketClient.on('connect', () => {
+                this.socketClient.end(msg + "\n");
+            });
+    
+            this.socketClient.on('error', error => {
+                reject('There was an error connecting to ' + this.getRemoteHost() + ':' + this.getRemotePort() + ' - ' + error);
+            });
 
-        this.socketClient.on('error', error => {
-            console.log('There was an error connecting to ' + this.getRemoteHost() + ':' + this.getRemotePort() + ' - ' + error);
+            this.socketClient.on('timeout', error => {
+                reject('Connection to  ' + this.getRemoteHost() + ':' + this.getRemotePort() + ' timed out - ' + error);
+            })
+    
+            this.socketClient.on('end', data => {
+                this.socketClient.destroy();
+                resolve();
+            });
+    
+            this.socketClient.connect(
+                this.getRemotePort(),
+                this.getRemoteHost()
+            );
         });
-
-        this.socketClient.on('end', data => {
-            this.socketClient.destroy();
-        });
-
-        this.socketClient.connect(
-            this.getRemotePort(),
-            this.getRemoteHost()
-        );
     }
 
     sendJSON(json) {
-        this.sendMessage(JSON.stringify(json) + "\n");
+        return this.sendMessage(JSON.stringify(json));
     }
 }
 
